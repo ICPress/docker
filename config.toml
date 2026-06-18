@@ -1,0 +1,177 @@
+[database]
+cache_store = "redis://redis:6379/0"
+data_store = "mysql://gorse:gorse_pass@tcp(localhost:3306)/gorse"
+table_prefix = ""
+cache_table_prefix = ""
+data_table_prefix = ""
+
+[database.mysql]
+isolation_level = "READ-UNCOMMITTED"
+max_open_conns = 32
+max_idle_conns = 32
+conn_max_lifetime = "10m"
+
+[database.postgres]
+max_open_conns = 64
+max_idle_conns = 64
+conn_max_lifetime = "1m"
+
+[database.redis]
+max_search_results = 10000
+
+[master]
+port = 8086
+host = "0.0.0.0"
+http_port = 8088
+http_host = "0.0.0.0"
+n_jobs = 1
+meta_timeout = "10s"
+dashboard_user_name = ""
+dashboard_password = ""
+
+ssl_mode = false
+ssl_ca = ""
+ssl_cert = ""
+ssl_key = ""
+http_cors_domains = []
+http_cors_methods = []
+admin_api_key = ""
+
+[server]
+default_n = 10
+api_key = ""
+clock_error = "5s"
+auto_insert_user = true
+
+auto_insert_item = false
+
+cache_expire = "10s"
+
+[recommend]
+cache_size = 25
+
+cache_expire = "72h"
+context_size = 100
+active_user_ttl = 14
+
+[recommend.data_source]
+
+positive_feedback_types = ["heart", "share", "dwell_60s", "scroll_90"]
+read_feedback_types = ["click", "scroll_50", "dwell_30s"]
+
+positive_feedback_ttl = 0
+
+item_ttl = 14
+
+[[recommend.non-personalized]]
+
+# The name of the leaderboard.
+name = "most_starred_weekly"
+
+# The score function for items in the leaderboard.
+score = "count(feedback, .FeedbackType == 'star')"
+
+# The filter for items in the leaderboard.
+filter = "(now() - item.Timestamp).Hours() < 168"
+
+[[recommend.item-to-item]]
+name = "neighbors"
+type = "tags"
+# The column of the item embeddings. Leave blank if type is "users".
+column = "item.Labels.topics"
+
+[[recommend.user-to-user]]
+name = "neighbors"
+
+type = "items"
+
+[[recommend.external]]
+
+
+[recommend.collaborative]
+type = "mf"
+
+fit_period = "60m"
+fit_epoch = 100
+optimize_period = "360m"
+optimize_trials = 10
+
+[recommend.collaborative.early_stopping]
+patience = 10
+
+[recommend.replacement]
+enable_replacement = false
+positive_replacement_decay = 0.8
+read_replacement_decay = 0.6
+
+[recommend.ranker]
+type = "fm"
+
+cache_expire = "120h"
+
+recommenders = [
+  "latest",
+  "collaborative",
+  "item-to-item/neighbors",
+  "user-to-user/neighbors"
+]
+
+fit_period = "60m"
+fit_epoch = 100
+optimize_period = "360m"
+optimize_trials = 10
+
+[recommend.ranker.early_stopping]
+patience = 10
+
+[recommend.ranker.reranker_api]
+auth_token = ""
+model = ""
+url = ""
+
+[recommend.fallback]
+
+recommenders = ["item-to-item/neighbors", "latest"]
+
+[tracing]
+enable_tracing = false
+exporter = "otlp"
+collector_endpoint = "http://localhost:4317"
+sampler = "always"
+ratio = 1
+
+[oidc]
+enable = false
+issuer = ""
+client_id = ""
+client_secret = ""
+redirect_url = ""
+
+[blob]
+uri = "/var/lib/gorse/blob"
+
+[blob.s3]
+endpoint = ""
+access_key_id = ""
+secret_access_key = ""
+
+[blob.gcs]
+credentials_file = ""
+
+[blob.azure]
+endpoint = ""
+account_name = ""
+account_key = ""
+connection_string = ""
+
+[openai]
+base_url = "http://localhost:11434/v1"
+auth_token = "ollama"
+chat_completion_model = "qwen2.5"
+chat_completion_rpm = 15000
+chat_completion_tpm = 1200000
+embedding_model = "mxbai-embed-large"
+embedding_dimensions = 1024
+embedding_rpm = 1800
+embedding_tpm = 1200000
+log_file = "openai.log"

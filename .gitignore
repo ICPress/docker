@@ -1,0 +1,6 @@
+gorse_log/
+gorse_master_data/
+gorse_server_data/
+gorse_worker_data/
+ignite_storage/
+mysql_data/
