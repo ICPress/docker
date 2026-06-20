@@ -34,7 +34,7 @@ If you are running the [publicly released Android app](https://play.google.com/s
 4. **HTTPS reverse proxy** — the [Android app](https://play.google.com/store/apps/details?id=net.crowdventures.storypop&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1) requires HTTPS (Google Play policy). Use [Pinggy](https://pinggy.io) for instant local HTTPS tunnelling (see [HTTPS & Android App Connectivity](#https--android-app-connectivity) below).
 
 
-Everything else (SMTP, JWT secret, Groq API key, Keystone auth, Firebase) is only needed for production deployments or when hosting services on separate machines.
+Everything else (JWT secret, Keystone auth, Firebase) is only needed for production deployments or when hosting services on separate machines.
 
 ---
 
