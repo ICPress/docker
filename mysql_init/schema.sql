@@ -480,6 +480,23 @@ CREATE TABLE IF NOT EXISTS `article_pending_review` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
+CREATE TABLE IF NOT EXISTS `known_public_sources` (
+  `source_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `host_name` varchar(255) NOT NULL,
+  `source_name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`source_id`),
+  UNIQUE KEY `host_name_index` (`host_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE IF NOT EXISTS `deleted_stories` (
+  `slug_title` varchar(60) NOT NULL,
+  `deleted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`slug_title`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
 CREATE TABLE IF NOT EXISTS `story_tags` (
   `tag_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `slug_title` VARCHAR(60) NOT NULL,
