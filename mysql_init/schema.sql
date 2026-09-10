@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS `user_story_log` (
   `slug_title` varchar(60) NOT NULL,
   `story_title` varchar(60) NOT NULL DEFAULT '',
   `empty_title` varchar(60) NOT NULL DEFAULT '',
-  `story_compressed` varbinary(10000) DEFAULT NULL,
+  `story_compressed` varbinary(40000) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`log_id`),
   KEY `slugtitle_index` (`slug_title`)
@@ -516,6 +516,210 @@ CREATE TABLE IF NOT EXISTS `story_tags` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
+
+--
+-- Financial filing/report storage
+--
+-- Naming is intentionally domain-neutral: report, metric, fact and source-link
+-- names do not mirror SEC/XBRL JSON property names or individual taxonomies.
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+
+-- One row per listed stock ticker. country_code should use the ISO 3166-1
+-- alpha-2 country code (for example US, SE, GB). A company may have multiple
+-- listings, so ticker/exchange/country form the natural uniqueness boundary.
+-- One row per listed stock ticker. country_code should use the ISO 3166-1
+-- alpha-2 country code (for example US, SE, GB). A company may have multiple
+-- listings, so ticker/exchange/country form the natural uniqueness boundary.
+CREATE TABLE IF NOT EXISTS `stock_ticker` (
+  `stock_ticker_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `ticker_symbol` varchar(32) NOT NULL,
+  `exchange_code` varchar(32) NOT NULL,
+  `country_code` char(2) NOT NULL,
+  `entity_name` varchar(255) DEFAULT NULL,
+  `has_sec_filings` tinyint(1) NOT NULL DEFAULT '1',
+  `sec_sync_recent_fingerprint` char(64) DEFAULT NULL,
+  `sec_sync_watermark_accession_number` varchar(32) DEFAULT NULL,
+  `sec_sync_watermark_filed_date` date DEFAULT NULL,
+  `sec_sync_checked_at` timestamp NULL DEFAULT NULL,
+  `sec_sync_retry_after` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`stock_ticker_id`),
+  UNIQUE KEY `stock_ticker_listing_uq` (`ticker_symbol`,`exchange_code`,`country_code`),
+  KEY `stock_ticker_symbol_idx` (`ticker_symbol`),
+  KEY `stock_ticker_country_idx` (`country_code`),
+  KEY `stock_ticker_sec_sync_retry_idx` (`sec_sync_retry_after`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+
+CREATE TABLE IF NOT EXISTS `stock_weekly_gex` (
+  `stock_weekly_gex_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `stock_ticker_id` bigint unsigned NOT NULL,
+  `expiration_date` date NOT NULL,
+  `expiration_type` char(1) NOT NULL DEFAULT 'w',
+  `net_exposure` decimal(30,6) DEFAULT NULL,
+  `call_exposure` decimal(30,6) DEFAULT NULL,
+  `put_exposure` decimal(30,6) DEFAULT NULL,
+  `call_wall_price` decimal(20,8) DEFAULT NULL,
+  `put_wall_price` decimal(20,8) DEFAULT NULL,
+  `gamma_flip_price` decimal(20,8) DEFAULT NULL,
+  `gamma_flip_method` varchar(64) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`stock_weekly_gex_id`),
+  UNIQUE KEY `stock_weekly_gex_ticker_expiration_uq` (`stock_ticker_id`,`expiration_date`),
+  KEY `stock_weekly_gex_expiration_idx` (`expiration_date`),
+  CONSTRAINT `stock_weekly_gex_stock_ticker_fk`
+    FOREIGN KEY (`stock_ticker_id`)
+    REFERENCES `stock_ticker` (`stock_ticker_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Daily regular-session OHLCV candles sourced from IBKR.  The scanner/history
+-- integration upserts by listing and trading date, so reruns and incremental
+-- refreshes are idempotent.
+CREATE TABLE IF NOT EXISTS `stock_daily_ohlc` (
+  `stock_daily_ohlc_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `stock_ticker_id` bigint unsigned NOT NULL,
+  `trading_date` date NOT NULL,
+  `open_price` decimal(20,8) NOT NULL,
+  `high_price` decimal(20,8) NOT NULL,
+  `low_price` decimal(20,8) NOT NULL,
+  `close_price` decimal(20,8) NOT NULL,
+  `volume` decimal(30,8) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`stock_daily_ohlc_id`),
+  UNIQUE KEY `stock_daily_ohlc_ticker_date_uq` (`stock_ticker_id`,`trading_date`),
+  KEY `stock_daily_ohlc_trading_date_idx` (`trading_date`),
+  CONSTRAINT `stock_daily_ohlc_stock_ticker_fk`
+    FOREIGN KEY (`stock_ticker_id`)
+    REFERENCES `stock_ticker` (`stock_ticker_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- One row per filed report/form. SEC accession numbers are globally unique.
+CREATE TABLE IF NOT EXISTS `financial_report` (
+  `report_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `stock_ticker_id` bigint unsigned NOT NULL,
+  `accession_number` varchar(32) NOT NULL,
+  `form_type` varchar(20) NOT NULL,
+  `filed_date` date NOT NULL,
+  `period_start_date` date DEFAULT NULL,
+  `period_end_date` date NOT NULL,
+  `fiscal_year` smallint unsigned NOT NULL,
+  `period_type` varchar(16) NOT NULL,
+  `fiscal_quarter` tinyint unsigned DEFAULT NULL,
+  `archived` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`report_id`),
+  UNIQUE KEY `financial_report_listing_accession_uq` (`stock_ticker_id`,`accession_number`),
+  KEY `financial_report_accession_number_idx` (`accession_number`),
+  KEY `financial_report_period_end_date_idx` (`period_end_date`),
+  KEY `financial_report_form_period_idx` (`form_type`,`period_end_date`),
+  KEY `financial_report_stock_ticker_idx` (`stock_ticker_id`),
+  KEY `financial_report_coverage_idx` (`stock_ticker_id`,`fiscal_year`,`period_type`,`fiscal_quarter`),
+  CONSTRAINT `financial_report_stock_ticker_fk`
+    FOREIGN KEY (`stock_ticker_id`)
+    REFERENCES `stock_ticker` (`stock_ticker_id`)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Reusable metric definitions. Keys and display names are stored once for all
+-- issuers and reports. The persistence layer inserts a definition on first use
+-- and reuses its metric_id thereafter.
+-- SEC synchronization metadata is stored per entity on stock_ticker.
+-- Successful report coverage remains in financial_report; no separate per-accession
+-- Round110: sec_filing_sync_state is no longer required; SEC sync checkpoint state lives on stock_ticker.
+CREATE TABLE IF NOT EXISTS `financial_metric` (
+  `metric_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `metric_key` varchar(128) NOT NULL,
+  `metric_name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`metric_id`),
+  UNIQUE KEY `financial_metric_key_uq` (`metric_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- One value per metric definition and filed report. metric_status preserves
+-- the output status (for example Reported/Calculated), while derivation_type
+-- preserves DirectCalculatedEstimated semantics (Direct/Calculated/Estimated).
+-- verifiable means AlphaQuery reports the same metric, period and unit/currency;
+-- verified additionally means the values are within the configured tolerance.
+CREATE TABLE IF NOT EXISTS `financial_metric_value` (
+  `metric_value_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `report_id` bigint unsigned NOT NULL,
+  `metric_id` bigint unsigned NOT NULL,
+  `metric_value` decimal(65,30) NOT NULL,
+  `unit_code` varchar(64) NOT NULL,
+  `metric_status` varchar(32) NOT NULL,
+  `derivation_type` varchar(32) NOT NULL,
+  `is_gaap` tinyint(1) NOT NULL DEFAULT '0',
+  `calculation_formula` varchar(1000) DEFAULT NULL,
+  `reported_rounding_increment` decimal(65,30) DEFAULT NULL,
+  `reported_zero_is_rounded` tinyint(1) NOT NULL DEFAULT '0',
+  `verifiable` tinyint(1) NOT NULL DEFAULT '0',
+  `verified` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`metric_value_id`),
+  UNIQUE KEY `financial_metric_value_report_metric_uq` (`report_id`,`metric_id`),
+  KEY `financial_metric_value_metric_idx` (`metric_id`),
+  CONSTRAINT `financial_metric_value_report_fk`
+    FOREIGN KEY (`report_id`)
+    REFERENCES `financial_report` (`report_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `financial_metric_value_metric_fk`
+    FOREIGN KEY (`metric_id`)
+    REFERENCES `financial_metric` (`metric_id`)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Atomic filing facts used as provenance/inputs for key metrics.
+-- Context dates are retained because a single filing can contain current,
+-- comparative, year-to-date and instant facts at the same time. Fact-level
+-- rounding metadata is retained independently from metric-level rounding.
+CREATE TABLE IF NOT EXISTS `financial_fact` (
+  `fact_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `report_id` bigint unsigned NOT NULL,
+  `taxonomy_name` varchar(64) NOT NULL,
+  `concept_name` varchar(255) NOT NULL,
+  `unit_code` varchar(64) NOT NULL,
+  `reported_value` decimal(65,30) NOT NULL,
+  `fact_label` varchar(512) DEFAULT NULL,
+  `context_start_date` date DEFAULT NULL,
+  `context_end_date` date DEFAULT NULL,
+  `reported_rounding_increment` decimal(65,30) DEFAULT NULL,
+  `reported_zero_is_rounded` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`fact_id`),
+  KEY `financial_fact_report_idx` (`report_id`),
+  KEY `financial_fact_concept_idx` (`taxonomy_name`,`concept_name`),
+  KEY `financial_fact_context_idx` (`report_id`,`context_end_date`,`context_start_date`),
+  CONSTRAINT `financial_fact_report_fk`
+    FOREIGN KEY (`report_id`)
+    REFERENCES `financial_report` (`report_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Many-to-many provenance link: a calculated metric can use multiple facts,
+-- while the same fact can support multiple normalized metrics.
+CREATE TABLE IF NOT EXISTS `financial_metric_source` (
+  `metric_value_id` bigint unsigned NOT NULL,
+  `fact_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`metric_value_id`,`fact_id`),
+  KEY `financial_metric_source_fact_idx` (`fact_id`),
+  CONSTRAINT `financial_metric_source_value_fk`
+    FOREIGN KEY (`metric_value_id`)
+    REFERENCES `financial_metric_value` (`metric_value_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `financial_metric_source_fact_fk`
+    FOREIGN KEY (`fact_id`)
+    REFERENCES `financial_fact` (`fact_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
