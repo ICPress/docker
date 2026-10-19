@@ -110,7 +110,7 @@ services:
       - 5050:5050
       
   icpress-apiplatform:
-    image: apiplatform:latest
+    image: icpress/apiplatform:latest
     restart: unless-stopped
     ports:
       - 5110:5110
@@ -125,7 +125,7 @@ services:
       - icpress-spacy
       
   icpress-siteplatform:
-    image: siteplatform:latest
+    image: icpress/siteplatform:latest
     restart: unless-stopped
     ports:
       - 5111:5111
