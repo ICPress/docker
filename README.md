@@ -1,6 +1,6 @@
 # ICPress Platform
 
-[ICPress](https://icpress.org) is a self-hosted open-source news and content platform consisting of multiple services orchestrated via Docker Compose, including API, site, mail, and event handling backed by MySQL, Redis, Apache Ignite, Gorse (recommendation engine), and OpenStack Swift (object storage).
+[ICPress](https://icpress.org) is a self-hosted open-source news and content platform consisting of multiple services orchestrated via Docker Compose, including API, site, mail, and event handling backed by MySQL, Redis, Gorse (recommendation engine), and OpenStack Swift (object storage).
 
 ---
 
@@ -261,7 +261,6 @@ The file is already referenced in `docker-compose.yml` for the services that nee
 | `gorse-worker` | 8089 | Recommendation engine worker |
 | `mysql` | 3306 | Primary database |
 | `redis` | 6379 | Cache & message broker |
-| `apache-ignite` | 10800 | In-memory data grid |
 | `openstack-swift` | 8080 | Object / blob storage |
 
 ---

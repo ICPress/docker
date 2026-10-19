@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `mail_queue` (
   `queue_id` int unsigned NOT NULL AUTO_INCREMENT,
   `email` varchar(255) NOT NULL,
   `type` tinyint unsigned NOT NULL,
-  `additional_data` varchar(255) DEFAULT NULL,
+  `additional_data` text DEFAULT NULL,
   `claimed` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`queue_id`)
@@ -153,10 +153,16 @@ CREATE TABLE IF NOT EXISTS `rewards` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE IF NOT EXISTS `sent_links_users` (
   `request_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `username` varchar(20) NOT NULL,
+  `username` varchar(20) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
   `ip_address` binary(16) NOT NULL,
   `verified_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `token_hash` binary(32) DEFAULT NULL,
+  `expires_at` timestamp NULL DEFAULT NULL,
+  UNIQUE KEY `sent_links_token_hash_uq` (`token_hash`),
+  KEY `sent_links_expiry_idx` (`expires_at`),
+  KEY `sent_links_email_created_idx` (`email`,`created_at`),
   PRIMARY KEY (`request_id`),
   KEY `username_index` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -308,6 +314,7 @@ CREATE TABLE IF NOT EXISTS `user_message` (
   `deleted` tinyint(1) NOT NULL DEFAULT '0',
   `is_read` tinyint(1) NOT NULL DEFAULT '0',
   `published_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `message_unread_idx` (`target_username`, `is_read`, `deleted`),
   PRIMARY KEY (`message_id`),
   KEY `username_index` (`username`),
   KEY `target_username_index` (`target_username`),
@@ -329,6 +336,7 @@ CREATE TABLE IF NOT EXISTS `user_notification` (
   `notification_read` tinyint(1) NOT NULL DEFAULT '0',
   `available_from` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `notification_unread_idx` (`username`, `notification_read`, `available_from`),
   PRIMARY KEY (`notification_id`),
   KEY `username_index` (`username`),
   KEY `available_from_index` (`available_from`)
@@ -402,6 +410,7 @@ CREATE TABLE IF NOT EXISTS `user_story_log` (
   `empty_title` varchar(60) NOT NULL DEFAULT '',
   `story_compressed` varbinary(40000) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `story_latest_snapshot_idx` (`slug_title`, `log_id`),
   PRIMARY KEY (`log_id`),
   KEY `slugtitle_index` (`slug_title`)
 ) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -454,6 +463,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` varchar(255) NOT NULL,
   `username` varchar(20) NOT NULL,
   `ip_address` binary(16) NOT NULL,
+  `full_name` varchar(200) DEFAULT NULL,
+  `google_subject` varchar(255) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `profile_icon` varchar(255) DEFAULT NULL,
   `profile_background_image` varchar(255) DEFAULT NULL,
   `profile_text` varchar(500) DEFAULT NULL,
@@ -462,7 +473,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `wallet_address` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`username`),
-  UNIQUE KEY `email_index` (`email`)
+  UNIQUE KEY `email_index` (`email`),
+  UNIQUE KEY `users_google_subject_uq` (`google_subject`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 

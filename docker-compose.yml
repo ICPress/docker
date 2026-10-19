@@ -50,18 +50,6 @@ services:
       - ./gorse_server_data:/var/lib/gorse
     depends_on:
       - gorse-master
-
-  apache-ignite:
-    image: apacheignite/ignite:2.18.0
-    restart: unless-stopped
-    ports:
-      - 10800:10800
-    environment:
-      IGNITE_WORK_DIR: /storage,
-      CONFIG_URI: /ignite_config.xml
-    volumes:
-      - ./ignite_config.xml:/ignite_config.xml
-      - ./ignite_storage:/storage
           
   gorse-master:
     image: zhenghaoz/gorse-master:0.5.7
@@ -101,7 +89,6 @@ services:
     depends_on:
       - redis
       - mysql
-      - apache-ignite
       - gorse-master
       
   icpress-eventplatform:
@@ -114,7 +101,6 @@ services:
     depends_on:
       - redis
       - mysql
-      - apache-ignite
       - gorse-master
       
   icpress-spacy:
@@ -124,7 +110,7 @@ services:
       - 5050:5050
       
   icpress-apiplatform:
-    image: icpress/apiplatform:1.0
+    image: apiplatform:latest
     restart: unless-stopped
     ports:
       - 5110:5110
@@ -135,12 +121,11 @@ services:
     depends_on:
       - redis
       - mysql
-      - apache-ignite
       - gorse-master
       - icpress-spacy
       
   icpress-siteplatform:
-    image: icpress/apiplatform:1.0
+    image: siteplatform:latest
     restart: unless-stopped
     ports:
       - 5111:5111
@@ -151,7 +136,6 @@ services:
     depends_on:
       - redis
       - mysql
-      - apache-ignite
       - gorse-master
       - icpress-apiplatform
       
