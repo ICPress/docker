@@ -81,7 +81,7 @@ services:
       - 8080:8080
           
   icpress-mailplatform:
-    image: icpress/mailplatform:1.0
+    image: icpress/mailplatform:latest
     restart: unless-stopped
     volumes:
       - ./appsettings.json:/app/appsettings.json
@@ -92,7 +92,7 @@ services:
       - gorse-master
       
   icpress-eventplatform:
-    image: icpress/eventplatform:1.0
+    image: icpress/eventplatform:latest
     restart: unless-stopped
     volumes:
       - ./appsettings.json:/app/appsettings.json
@@ -104,7 +104,7 @@ services:
       - gorse-master
       
   icpress-spacy:
-    image: icpress/icpress-spacy:1.0
+    image: icpress/icpress-spacy:latest
     restart: unless-stopped
     ports:
       - 5050:5050
