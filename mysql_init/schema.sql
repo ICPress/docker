@@ -12,8 +12,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 CREATE DATABASE IF NOT EXISTS storypop;
-CREATE USER IF NOT EXISTS 'gorse'@'%' IDENTIFIED WITH caching_sha2_password BY 'gorse_pass';
-GRANT ALL PRIVILEGES ON storypop.* to 'gorse'@'%' WITH GRANT OPTION;
 USE storypop;
 
 
@@ -584,6 +582,7 @@ CREATE TABLE IF NOT EXISTS `stock_weekly_gex` (
   PRIMARY KEY (`stock_weekly_gex_id`),
   UNIQUE KEY `stock_weekly_gex_ticker_expiration_uq` (`stock_ticker_id`,`expiration_date`),
   KEY `stock_weekly_gex_expiration_idx` (`expiration_date`),
+  KEY `stock_weekly_gex_ticker_created_idx` (`stock_ticker_id`,`created_at`),
   CONSTRAINT `stock_weekly_gex_stock_ticker_fk`
     FOREIGN KEY (`stock_ticker_id`)
     REFERENCES `stock_ticker` (`stock_ticker_id`)
@@ -731,6 +730,71 @@ CREATE TABLE IF NOT EXISTS `financial_metric_source` (
     FOREIGN KEY (`fact_id`)
     REFERENCES `financial_fact` (`fact_id`)
     ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE IF NOT EXISTS `stock_pine_script` (
+  `pine_script_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `stock_ticker_id` bigint unsigned NOT NULL,
+  `created_date` date NOT NULL DEFAULT (CURRENT_DATE),
+  `script_compressed` mediumblob NOT NULL,
+  `script_labels` mediumblob DEFAULT NULL,
+  PRIMARY KEY (`pine_script_id`),
+  KEY `stock_pine_script_ticker_created_idx` (`stock_ticker_id`,`created_date`),
+  CONSTRAINT `stock_pine_script_ticker_fk`
+    FOREIGN KEY (`stock_ticker_id`)
+    REFERENCES `stock_ticker` (`stock_ticker_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE IF NOT EXISTS `pine_script_patterns` (
+  `pine_script_id` bigint unsigned NOT NULL,
+  `has_head_and_shoulders` tinyint(1) NOT NULL DEFAULT '0',
+  `has_inverse_head_and_shoulders` tinyint(1) NOT NULL DEFAULT '0',
+  `has_channel` tinyint(1) NOT NULL DEFAULT '0',
+  `has_wedge` tinyint(1) NOT NULL DEFAULT '0',
+  `has_flag` tinyint(1) NOT NULL DEFAULT '0',
+  `has_cup_and_handle` tinyint(1) NOT NULL DEFAULT '0',
+  `has_inverse_cup_and_handle` tinyint(1) NOT NULL DEFAULT '0',
+  `has_uptrend` tinyint(1) NOT NULL DEFAULT '0',
+  `has_downtrend` tinyint(1) NOT NULL DEFAULT '0',
+  `has_neutral_trend` tinyint(1) NOT NULL DEFAULT '0',
+  `has_rsi_bullish_divergence` tinyint(1) NOT NULL DEFAULT '0',
+  `has_rsi_bearish_divergence` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`pine_script_id`),
+  CONSTRAINT `pine_script_patterns_script_fk`
+    FOREIGN KEY (`pine_script_id`)
+    REFERENCES `stock_pine_script` (`pine_script_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `pine_script_patterns_trend_chk`
+    CHECK (
+      `has_uptrend` + `has_downtrend` + `has_neutral_trend` <= 1
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `stock_pine_support_resistance` (
+  `support_resistance_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pine_script_id` bigint unsigned NOT NULL,
+  `level_name` varchar(128) NOT NULL,
+  `level_fixed_price` decimal(20,2) DEFAULT NULL,
+  `level_price_range_start` decimal(20,2) DEFAULT NULL,
+  `level_price_range_end` decimal(20,2) DEFAULT NULL,
+  `level_price_formula` varchar(1000) DEFAULT NULL,
+  `level_description` varchar(1000) NOT NULL,
+  PRIMARY KEY (`support_resistance_id`),
+  KEY `stock_pine_support_resistance_script_idx` (`pine_script_id`),
+  CONSTRAINT `stock_pine_support_resistance_script_fk`
+    FOREIGN KEY (`pine_script_id`)
+    REFERENCES `stock_pine_script` (`pine_script_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `stock_pine_support_resistance_range_chk`
+    CHECK (
+      `level_price_range_start` IS NULL
+      OR `level_price_range_end` IS NULL
+      OR `level_price_range_start` <= `level_price_range_end`
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*!40101 SET character_set_client = @saved_cs_client */;
