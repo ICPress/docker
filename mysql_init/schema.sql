@@ -797,6 +797,14 @@ CREATE TABLE IF NOT EXISTS `stock_pine_support_resistance` (
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+
+CREATE TABLE IF NOT EXISTS stock_ticker_peer (
+    stock_ticker_id BIGINT UNSIGNED NOT NULL,
+    stock_ticker_id_peer_id BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (stock_ticker_id, stock_ticker_id_peer_id),
+    KEY idx_stock_ticker_peer_peer_id (stock_ticker_id_peer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
