@@ -805,6 +805,25 @@ CREATE TABLE IF NOT EXISTS `stock_ticker_peer` (
     KEY `idx_stock_ticker_peer_peer_id` (`stock_ticker_id_peer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+
+CREATE TABLE IF NOT EXISTS stock_ticker_group (
+    group_id SMALLINT UNSIGNED NOT NULL,
+    name VARCHAR(160) NOT NULL,
+    PRIMARY KEY (group_id),
+    UNIQUE KEY uq_stock_ticker_group_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS stock_ticker_group_relation (
+    group_id SMALLINT UNSIGNED NOT NULL,
+    stock_ticker_id BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (stock_ticker_id),
+    KEY idx_stock_ticker_group_relation_group_id (group_id),
+    CONSTRAINT fk_stock_ticker_group_relation_group
+        FOREIGN KEY (group_id) REFERENCES stock_ticker_group(group_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
